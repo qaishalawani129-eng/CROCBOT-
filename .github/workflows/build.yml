@@ -19,27 +19,34 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract app
+        run: |
+          mkdir -p project
+          unzip -o *.zip -d project
 
       - name: Find Android project
         run: |
-          echo "Files:"
-          find . -maxdepth 4 -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradlew" \) -print
+          echo "Looking for Gradle project..."
+          find project -name gradlew -type f -print
 
       - name: Build APK
         run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew assembleDebug
-          elif [ -f "./project/gradlew" ]; then
-            chmod +x ./project/gradlew
-            cd project
-            ./gradlew assembleDebug
-          else
-            echo "Could not find gradlew"
+          GRADLEW=$(find project -name gradlew -type f | head -n 1)
+
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: gradlew was not found!"
             exit 1
           fi
+
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          echo "Android project found at: $PROJECT_DIR"
+
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
